@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  notion-job-tracker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: notion-job-tracker-webhook
+    restart: unless-stopped
+
+    ports:
+      - "${PORT:-8000}:8000"
+
+    environment:
+      # These will be loaded from .env file
+      - NOTION_API_KEY=${NOTION_API_KEY}
+      - NOTION_DATABASE_ID=${NOTION_DATABASE_ID}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-sonnet-4-5-20250929}
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+      - PORT=8000
+      - HOST=0.0.0.0
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+
+    env_file:
+      - .env
+
+    volumes:
+      # Optional: Mount logs directory for persistent logging
+      - ./logs:/app/logs
+
+    networks:
+      - notion-tracker-network
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    # Resource limits (adjust based on your NAS capacity)
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+networks:
+  notion-tracker-network:
+    driver: bridge
