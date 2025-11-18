@@ -40,13 +40,14 @@ services:
       start_period: 10s
 
     # Resource limits (adjust based on your NAS capacity)
+    # Note: CPU limits commented out for compatibility with systems that don't support CPU CFS scheduler
     deploy:
       resources:
         limits:
-          cpus: '1.0'
+          # cpus: '1.0'  # Uncomment if your system supports CPU limits
           memory: 512M
         reservations:
-          cpus: '0.5'
+          # cpus: '0.5'  # Uncomment if your system supports CPU limits
           memory: 256M
 
 networks:
