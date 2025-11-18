@@ -42,4 +42,4 @@ services:
 
 networks:
   notion-tracker-network:
-    external: true
+    driver: bridge
