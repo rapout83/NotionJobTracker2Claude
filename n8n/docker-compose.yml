@@ -28,8 +28,8 @@ services:
       retries: 10
 
     volumes:
-      # Persist PostgreSQL data
-      - ./n8n_db:/var/lib/postgresql/data:rw
+      # Persist PostgreSQL data in data/n8n/db
+      - ../data/n8n/db:/var/lib/postgresql/data:rw
 
     environment:
       TZ: ${TZ:-America/New_York}
@@ -67,10 +67,10 @@ services:
       - "5678:5678"
 
     volumes:
-      # Persist n8n data (workflows, credentials, etc.)
-      - ./n8n_data:/root/.n8n:rw
-      # Optional: Mount a folder for file operations in workflows
-      - ./n8n_files:/files:rw
+      # Persist n8n data (workflows, credentials, etc.) in data/n8n/data
+      - ../data/n8n/data:/root/.n8n:rw
+      # Optional: Mount a folder for file operations in workflows in data/n8n/files
+      - ../data/n8n/files:/files:rw
 
     environment:
       # Timezone

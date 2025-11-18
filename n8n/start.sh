@@ -1,23 +1,23 @@
 #!/bin/bash
 
-# Startup script for NotionJobTracker2Claude on NAS
+# Startup script for n8n on NAS
 
 set -e
 
-echo "Starting NotionJobTracker2Claude webhook service..."
+echo "Starting n8n automation service..."
 
 # Check if .env file exists
 if [ ! -f .env ]; then
     echo "Error: .env file not found!"
-    echo "Please copy .env.example to .env and configure your API keys:"
+    echo "Please copy .env.example to .env and configure your settings:"
     echo "  cp .env.example .env"
     echo "  nano .env  # or use your preferred editor"
     exit 1
 fi
 
 # Create data directory structure
-mkdir -p data/webhook/logs
-echo "✓ Created data directory structure"
+mkdir -p ../data/n8n/{data,db,files}
+echo "✓ Created n8n data directory structure"
 
 # Check Docker and Docker Compose
 if ! command -v docker &> /dev/null; then
@@ -38,18 +38,17 @@ else
 fi
 
 # Build and start the service
-echo "Building Docker image..."
+echo "Building n8n services..."
 $DOCKER_COMPOSE build
 
-echo "Starting service..."
+echo "Starting n8n + PostgreSQL..."
 $DOCKER_COMPOSE up -d
 
 echo ""
-echo "Service started successfully!"
+echo "✓ n8n started successfully!"
 echo ""
 echo "Check status with: $DOCKER_COMPOSE ps"
 echo "View logs with: $DOCKER_COMPOSE logs -f"
 echo "Stop service with: $DOCKER_COMPOSE down"
 echo ""
-echo "Webhook endpoint: http://localhost:${PORT:-8000}/webhook/notion"
-echo "Health check: http://localhost:${PORT:-8000}/health"
+echo "Access n8n: http://localhost:5678"

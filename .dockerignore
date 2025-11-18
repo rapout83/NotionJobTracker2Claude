@@ -1,0 +1,33 @@
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+docs/
+
+# Python development
+__pycache__/
+*.pyc
+*.pyo
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# Runtime data (not needed in image)
+data/
+logs/
+*.log
+
+# Config files (use env vars instead)
+.env
+.env.*
+
+# CI/CD
+.github/
+
+# n8n folder (not needed in webhook image)
+n8n/

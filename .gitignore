@@ -35,16 +35,10 @@ wheels/
 
 # Logs
 *.log
-logs/
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Runtime data folders
-n8n_data/
-n8n_db/
-n8n_files/
-n8n/n8n_data/
-n8n/n8n_db/
-n8n/n8n_files/
+# Docker runtime data folder
+data/
