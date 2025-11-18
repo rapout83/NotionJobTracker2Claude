@@ -140,6 +140,8 @@ Direct processing endpoint (for testing)
 
 See [SETUP_NAS.md](./SETUP_NAS.md) for detailed NAS deployment instructions.
 
+**Synology NAS users**: For n8n installation, see [SETUP_N8N_SYNOLOGY.md](./SETUP_N8N_SYNOLOGY.md) for Synology-specific instructions.
+
 ## Notion Setup
 
 See [SETUP_NOTION.md](./SETUP_NOTION.md) for detailed Notion integration and webhook setup.
@@ -164,10 +166,12 @@ See [SETUP_NOTION.md](./SETUP_NOTION.md) for detailed Notion integration and web
 If you prefer a self-hosted automation tool:
 
 1. Install n8n on your NAS
+   - **For Synology NAS**: See [SETUP_N8N_SYNOLOGY.md](./SETUP_N8N_SYNOLOGY.md) for installation via Container Manager
+   - **For other NAS systems**: See [DEPLOYMENT_OPTIONS.md](./DEPLOYMENT_OPTIONS.md)
 2. Create a workflow:
    - **Trigger**: Notion node - Watch database
    - **Action**: HTTP Request node
-     - URL: `http://localhost:8000/webhook/notion`
+     - URL: `http://localhost:8000/webhook/notion` (or `http://your-nas-ip:8000/webhook/notion`)
      - Add header: `X-Webhook-Secret`
      - Body: Page ID from Notion trigger
 
