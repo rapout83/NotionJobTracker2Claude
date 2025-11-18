@@ -1,34 +1,117 @@
-# Optional: Add n8n for self-hosted automation
+# Optional: Add n8n with PostgreSQL for self-hosted automation
+#
+# This is a PRODUCTION-READY n8n setup with PostgreSQL database
 # Usage: docker-compose -f docker-compose.yml -f docker-compose.n8n.yml up -d
+#
+# Note: For Synology NAS, use Container Manager GUI instead (see SETUP_N8N_SYNOLOGY.md)
 
 version: '3.8'
 
 services:
+  # PostgreSQL database for n8n
+  # This stores all workflows, credentials, and execution history
+  n8n-db:
+    image: postgres:17
+    container_name: n8n-db
+    hostname: n8n-db
+    security_opt:
+      - no-new-privileges:true
+
+    # Health check to ensure database is ready before n8n starts
+    healthcheck:
+      test: ["CMD", "pg_isready", "-q", "-d", "${N8N_DB_NAME:-n8n}", "-U", "${N8N_DB_USER:-n8nuser}"]
+      timeout: 45s
+      interval: 10s
+      retries: 10
+
+    volumes:
+      # Persist PostgreSQL data
+      - ./n8n_db:/var/lib/postgresql/data:rw
+
+    environment:
+      TZ: ${TZ:-America/New_York}
+      POSTGRES_DB: ${N8N_DB_NAME:-n8n}
+      POSTGRES_USER: ${N8N_DB_USER:-n8nuser}
+      POSTGRES_PASSWORD: ${N8N_DB_PASSWORD:-n8npass}
+
+    networks:
+      - notion-tracker-network
+
+    restart: on-failure:5
+
+  # n8n automation service
   n8n:
     # Official n8n image from Docker Hub - no cloning needed!
     image: n8nio/n8n:latest
-    container_name: n8n-automation
-    restart: unless-stopped
+    container_name: n8n
+    hostname: n8n
+
+    # Health check for n8n service
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 5678 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+
+    security_opt:
+      - no-new-privileges:true
+
+    # Run as root user (required for some features)
+    user: "0:0"
 
     ports:
       - "5678:5678"
 
-    environment:
-      # Basic authentication for n8n web interface
-      - N8N_BASIC_AUTH_ACTIVE=true
-      - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
-      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD:-changeme}
-
-      # Timezone
-      - GENERIC_TIMEZONE=${TZ:-America/New_York}
-      - TZ=${TZ:-America/New_York}
-
     volumes:
       # Persist n8n data (workflows, credentials, etc.)
-      - ./n8n_data:/home/node/.n8n
+      - ./n8n_data:/root/.n8n:rw
+      # Optional: Mount a folder for file operations in workflows
+      - ./n8n_files:/files:rw
+
+    environment:
+      # Timezone
+      GENERIC_TIMEZONE: ${TZ:-America/New_York}
+      TZ: ${TZ:-America/New_York}
+
+      # n8n Configuration
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      NODE_ENV: production
+
+      # Basic Auth (simple username/password login)
+      # For production, consider using OAuth or other auth methods
+      N8N_BASIC_AUTH_ACTIVE: ${N8N_BASIC_AUTH_ACTIVE:-false}
+      N8N_BASIC_AUTH_USER: ${N8N_USER:-admin}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_PASSWORD:-changeme}
+
+      # Encryption key for credentials (generate a random 32+ character string)
+      # IMPORTANT: Keep this secret and don't change it after initial setup!
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-changeme-use-a-random-string-here}
+
+      # PostgreSQL Database Configuration
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_DATABASE: ${N8N_DB_NAME:-n8n}
+      DB_POSTGRESDB_HOST: n8n-db
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_USER: ${N8N_DB_USER:-n8nuser}
+      DB_POSTGRESDB_PASSWORD: ${N8N_DB_PASSWORD:-n8npass}
+
+      # Optional: Enable runners for better performance
+      N8N_RUNNERS_ENABLED: ${N8N_RUNNERS_ENABLED:-true}
+
+      # Security settings
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: true
 
     networks:
       - notion-tracker-network
+
+    # Wait for database to be healthy before starting n8n
+    depends_on:
+      n8n-db:
+        condition: service_healthy
+
+    restart: on-failure:5
 
     # Resource limits
     # Note: CPU limits commented out for compatibility with systems that don't support CPU CFS scheduler
@@ -36,10 +119,10 @@ services:
       resources:
         limits:
           # cpus: '1.0'  # Uncomment if your system supports CPU limits
-          memory: 512M
+          memory: 1024M
         reservations:
-          # cpus: '0.25'  # Uncomment if your system supports CPU limits
-          memory: 128M
+          # cpus: '0.5'  # Uncomment if your system supports CPU limits
+          memory: 512M
 
 networks:
   notion-tracker-network:

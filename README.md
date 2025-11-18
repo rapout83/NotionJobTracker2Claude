@@ -27,64 +27,148 @@ Notion Database → Webhook Trigger → This Service (on NAS) → Claude API
 - **Secure**: Webhook secret authentication
 - **Health Monitoring**: Built-in health check endpoints
 
-## Quick Start
+## Quick Start Guide
+
+### What You'll Install
+
+This project has TWO components:
+1. **Webhook Service** (required) - Connects Notion to Claude API
+2. **n8n Automation** (optional) - Triggers the webhook automatically
+
+**Most users should start with just the webhook service + Zapier.**
 
 ### Prerequisites
 
-- Python 3.11+ (for local development)
-- Docker and Docker Compose (for deployment)
-- Notion account with API access
-- Anthropic API key for Claude
-- Personal NAS or server (optional, for deployment)
+Before starting, you need:
+- ✅ **A NAS or server** with Docker installed (or your local computer)
+- ✅ **Notion account** - Free tier works fine
+- ✅ **Anthropic API key** - Get one at https://console.anthropic.com/
+- ✅ **Automation tool** - Choose one:
+  - Zapier (easiest, paid)
+  - Make.com (powerful, paid)
+  - n8n (self-hosted, free but complex)
 
-### Installation
+### Step-by-Step Installation
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd NotionJobTracker2Claude
-   ```
-
-2. **Configure environment variables**
-   ```bash
-   cp .env.example .env
-   nano .env  # Edit with your API keys
-   ```
-
-3. **Required environment variables**:
-   - `NOTION_API_KEY`: Your Notion integration token
-   - `NOTION_DATABASE_ID`: Your Notion job tracker database ID
-   - `ANTHROPIC_API_KEY`: Your Anthropic API key
-   - `WEBHOOK_SECRET`: A secret string for webhook authentication
-   - `PORT`: Port to run the service (default: 8000)
-
-### Running Locally
+#### Step 1: Clone the Repository
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Run the service
-python src/main.py
+# On your NAS or local machine, download the code
+git clone <repository-url>
+cd NotionJobTracker2Claude
 ```
 
-The service will be available at `http://localhost:8000`
+**What this does**: Downloads all the webhook service code to your machine.
 
-### Running with Docker
+#### Step 2: Configure Your API Keys
 
 ```bash
-# Make scripts executable
+# Copy the example configuration file
+cp .env.example .env
+
+# Edit it with your favorite text editor
+nano .env  # or use 'vi .env' or open in a text editor
+```
+
+**What this does**: Creates your configuration file. You need to fill in:
+
+**Required settings**:
+- `NOTION_API_KEY` - Get from https://www.notion.so/my-integrations (see SETUP_NOTION.md)
+- `NOTION_DATABASE_ID` - Get from your job tracker database URL
+- `ANTHROPIC_API_KEY` - Get from https://console.anthropic.com/
+- `WEBHOOK_SECRET` - Make up a random string (like a password)
+
+**Example**:
+```env
+NOTION_API_KEY=secret_abc123def456...
+NOTION_DATABASE_ID=f1234567890abcdef1234567890abcd
+ANTHROPIC_API_KEY=sk-ant-abc123...
+WEBHOOK_SECRET=my-super-secret-webhook-password-12345
+```
+
+**To generate a secure webhook secret**:
+```bash
+openssl rand -hex 32
+```
+
+#### Step 3: Start the Webhook Service
+
+**What this does**: Starts a web service that listens for triggers and sends job data to Claude.
+
+```bash
+# Make the start script executable (only needed once)
 chmod +x start.sh stop.sh
 
-# Start the service
+# Start the webhook service
 ./start.sh
+```
 
-# Check logs
+**Behind the scenes**, this command:
+1. Builds a Docker container with Python and all dependencies
+2. Starts the webhook service on port 8000
+3. Makes it available at `http://your-nas-ip:8000`
+
+**To verify it's running**:
+```bash
+# Check if the container is running
+docker ps
+
+# You should see a container named "notion-job-tracker-webhook"
+```
+
+**To check the logs** (see what's happening):
+```bash
 docker-compose logs -f
 
-# Stop the service
+# Press Ctrl+C to exit logs view
+```
+
+**To stop the service**:
+```bash
 ./stop.sh
 ```
+
+#### Step 4: Test the Webhook
+
+Test if the webhook service is working:
+
+```bash
+# Check health endpoint
+curl http://localhost:8000/health
+
+# You should see:
+# {"status": "healthy", "notion_client": "initialized", "claude_client": "initialized"}
+```
+
+If you see this, **the webhook service is working!** ✅
+
+#### Step 5: Set Up Automation (Choose One)
+
+Now you need something to trigger the webhook when you update Notion.
+
+**Option A: Zapier** (Easiest - Recommended for beginners)
+- See section "Zapier Integration" below
+- Takes 5 minutes to set up
+- Costs ~$20/month
+
+**Option B: Make.com** (More features)
+- Similar to Zapier, different interface
+- See SETUP_NOTION.md for details
+
+**Option C: Self-hosted n8n** (Free but complex)
+- Requires installing n8n on your NAS
+- See N8N_WORKFLOW_GUIDE.md for complete instructions
+- For Synology: See SETUP_N8N_SYNOLOGY.md
+
+### What Happens When Everything is Running?
+
+1. You update a job in your Notion database
+2. Zapier/Make/n8n detects the change
+3. It sends the job's page ID to your webhook at `http://your-nas:8000/webhook/notion`
+4. The webhook fetches the full job details from Notion
+5. It sends the job info to Claude AI for analysis
+6. Claude responds with insights, talking points, and recommendations
+7. The response is returned (you can save it back to Notion or view it in logs)
 
 ## API Endpoints
 
@@ -146,34 +230,92 @@ See [SETUP_NAS.md](./SETUP_NAS.md) for detailed NAS deployment instructions.
 
 See [SETUP_NOTION.md](./SETUP_NOTION.md) for detailed Notion integration and webhook setup.
 
-## Zapier Integration
+## Zapier Integration (Recommended)
 
-1. Create a new Zap in Zapier
-2. **Trigger**: Notion - "Updated Database Item" or "New Database Item"
-3. **Action**: Webhooks by Zapier - POST request
-   - URL: `http://your-nas-ip:8000/webhook/notion`
-   - Header: `X-Webhook-Secret: your-secret-here`
-   - Body:
-     ```json
-     {
-       "page_id": "{{page_id}}",
-       "action": "process"
-     }
-     ```
+**Zapier is the easiest way to connect Notion to the webhook.** Here's how:
 
-## Alternative: n8n Integration (Self-hosted)
+### Step 1: Create a New Zap
 
-If you prefer a self-hosted automation tool:
+1. Go to [zapier.com](https://zapier.com) and log in
+2. Click **"Create Zap"** button
+3. You'll be taken to the Zap editor
 
-1. Install n8n on your NAS
-   - **For Synology NAS**: See [SETUP_N8N_SYNOLOGY.md](./SETUP_N8N_SYNOLOGY.md) for installation via Container Manager
-   - **For other NAS systems**: See [DEPLOYMENT_OPTIONS.md](./DEPLOYMENT_OPTIONS.md)
-2. Create a workflow:
-   - **Trigger**: Notion node - Watch database
-   - **Action**: HTTP Request node
-     - URL: `http://localhost:8000/webhook/notion` (or `http://your-nas-ip:8000/webhook/notion`)
-     - Add header: `X-Webhook-Secret`
-     - Body: Page ID from Notion trigger
+### Step 2: Set Up the Trigger (Notion)
+
+1. **Choose App**: Click the trigger box and search for "Notion"
+2. **Choose Event**:
+   - Select **"Updated Database Item"** (triggers when you edit a job)
+   - OR **"New Database Item"** (triggers when you create a new job)
+3. Click **Continue**
+4. **Connect Notion Account**: Sign in to Notion and authorize Zapier
+5. **Configure Trigger**:
+   - **Database**: Select your Job Tracker database
+   - Leave other settings as default
+6. **Test Trigger**: Click "Test trigger" - you should see your recent jobs
+7. Click **Continue**
+
+### Step 3: Set Up the Action (Webhook)
+
+1. **Choose App**: Click the action box and search for "Webhooks by Zapier"
+2. **Choose Event**: Select **"POST"**
+3. Click **Continue**
+4. **Configure Webhook**:
+   - **URL**: `http://your-nas-ip:8000/webhook/notion`
+     - Replace `your-nas-ip` with your actual NAS IP address
+     - Example: `http://192.168.1.100:8000/webhook/notion`
+   - **Payload Type**: `JSON`
+   - **Data**: Click "Add a field" and add:
+     - Field Name: `page_id`
+     - Field Value: Click the field and select "ID" from Notion data
+     - Field Name: `action`
+     - Field Value: Type `process` (just plain text)
+   - **Headers**:
+     - Click "Add header"
+     - Key: `X-Webhook-Secret`
+     - Value: Your webhook secret from `.env` file
+     - Click "Add header" again
+     - Key: `Content-Type`
+     - Value: `application/json`
+5. **Test Action**: Click "Test action" - you should see a successful response with Claude's analysis
+6. If the test succeeds, click **Continue**
+
+### Step 4: Activate Your Zap
+
+1. Give your Zap a name: "Notion Job Tracker → Claude Analysis"
+2. Click **"Publish"** to activate it
+3. Toggle should show "On"
+
+**That's it!** Now when you update a job in Notion, Zapier will automatically send it to Claude for analysis.
+
+### Viewing Results
+
+To see Claude's analysis:
+- Check Zapier's task history (click on your Zap → Task History)
+- Or check webhook logs: `docker-compose logs -f`
+- Or optionally: Add another step to write results back to Notion
+
+---
+
+## Alternative: n8n Integration (Self-hosted, Free)
+
+**Want to avoid subscription costs?** Use n8n instead of Zapier (runs on your NAS for free).
+
+### Quick Overview:
+
+1. **Install n8n** on your NAS
+   - **Synology NAS**: See [SETUP_N8N_SYNOLOGY.md](./SETUP_N8N_SYNOLOGY.md)
+   - **Other NAS**: See [DEPLOYMENT_OPTIONS.md](./DEPLOYMENT_OPTIONS.md)
+2. **Create the workflow**: See [N8N_WORKFLOW_GUIDE.md](./N8N_WORKFLOW_GUIDE.md) for complete step-by-step instructions
+
+**Pros of n8n**:
+- Free and open source
+- Complete privacy (no data leaves your NAS)
+- More powerful than Zapier
+
+**Cons of n8n**:
+- More complex to set up
+- Requires more resources on your NAS
+- You manage everything yourself
 
 ## Customization
 
