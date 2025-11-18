@@ -41,4 +41,4 @@ wheels/
 Thumbs.db
 
 # Docker runtime data folder
-data/
+webhook/

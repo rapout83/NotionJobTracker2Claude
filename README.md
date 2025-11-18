@@ -222,9 +222,9 @@ Direct processing endpoint (for testing)
 
 ## Deployment on NAS
 
-See [SETUP_NAS.md](./SETUP_NAS.md) for detailed NAS deployment instructions.
+See [NAS_SETUP.md](./NAS_SETUP.md) for detailed NAS deployment instructions.
 
-**Synology NAS users**: For n8n installation, see [n8n/SETUP_SYNOLOGY.md](./n8n/SETUP_SYNOLOGY.md) for Synology-specific instructions.
+**For Synology users**: The webhook integrates cleanly with your existing `docker/n8n/` setup.
 
 ## Notion Setup
 

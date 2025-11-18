@@ -114,21 +114,18 @@ When you set up n8n, here's what runs on your NAS:
 
 ## Data Persistence
 
-When running with docker-compose, data is stored in:
+When running with docker-compose from the n8n/ folder, data is stored in:
 
 ```
-data/
-├── webhook/
-│   └── logs/         # Webhook service logs
-└── n8n/
-    ├── data/         # n8n workflows, settings, credentials
-    ├── db/           # PostgreSQL database
-    └── files/        # File operations in workflows
+../data/n8n/
+├── data/         # n8n workflows, settings, credentials
+├── db/           # PostgreSQL database
+└── files/        # File operations in workflows
 ```
 
-**⚠️ Important**: Back up the `data/` folder regularly!
+This maps to `/volume1/docker/n8n/` on your Synology NAS if you already have n8n installed there.
 
-See [DATA_ORGANIZATION.md](../DATA_ORGANIZATION.md) for details on the data structure.
+**⚠️ Important**: Back up your n8n data regularly!
 
 ## Common Tasks
 

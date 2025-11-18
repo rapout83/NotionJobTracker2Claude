@@ -26,9 +26,8 @@ services:
       - .env
 
     volumes:
-      # Webhook logs stored in data/webhook/logs
-      # This follows the same pattern as n8n (data/n8n/*)
-      - ./data/webhook/logs:/app/logs
+      # Webhook logs stored in webhook/logs
+      - ./webhook/logs:/app/logs
 
     networks:
       - notion-tracker-network
