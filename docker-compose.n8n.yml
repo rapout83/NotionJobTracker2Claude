@@ -1,0 +1,45 @@
+# Optional: Add n8n for self-hosted automation
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.n8n.yml up -d
+
+version: '3.8'
+
+services:
+  n8n:
+    # Official n8n image from Docker Hub - no cloning needed!
+    image: n8nio/n8n:latest
+    container_name: n8n-automation
+    restart: unless-stopped
+
+    ports:
+      - "5678:5678"
+
+    environment:
+      # Basic authentication for n8n web interface
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD:-changeme}
+
+      # Timezone
+      - GENERIC_TIMEZONE=${TZ:-America/New_York}
+      - TZ=${TZ:-America/New_York}
+
+    volumes:
+      # Persist n8n data (workflows, credentials, etc.)
+      - ./n8n_data:/home/node/.n8n
+
+    networks:
+      - notion-tracker-network
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+networks:
+  notion-tracker-network:
+    external: true
