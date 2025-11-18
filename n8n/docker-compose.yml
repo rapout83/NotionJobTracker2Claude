@@ -1,9 +1,12 @@
-# Optional: Add n8n with PostgreSQL for self-hosted automation
+# n8n with PostgreSQL - Production-Ready Setup
 #
-# This is a PRODUCTION-READY n8n setup with PostgreSQL database
-# Usage: docker-compose -f docker-compose.yml -f docker-compose.n8n.yml up -d
+# This docker-compose file sets up n8n with PostgreSQL for workflow automation.
+# For Synology NAS, use Container Manager GUI instead (see SETUP_SYNOLOGY.md)
 #
-# Note: For Synology NAS, use Container Manager GUI instead (see SETUP_N8N_SYNOLOGY.md)
+# Usage:
+#   1. Copy .env.example to .env and configure
+#   2. Run: docker-compose up -d
+#   3. Access n8n at http://your-nas-ip:5678
 
 version: '3.8'
 

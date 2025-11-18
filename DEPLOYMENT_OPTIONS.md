@@ -6,7 +6,7 @@ This guide explains the different ways to deploy and use the NotionJobTracker2Cl
 
 **If you're using a Synology NAS**, the docker-compose commands below may not work properly. Synology's Container Manager requires a different setup approach.
 
-**👉 See [SETUP_N8N_SYNOLOGY.md](./SETUP_N8N_SYNOLOGY.md) for Synology-specific instructions.**
+**👉 See [n8n/SETUP_SYNOLOGY.md](./n8n/SETUP_SYNOLOGY.md) for Synology-specific instructions.**
 
 The webhook service itself will work fine on Synology, but n8n installation requires using Container Manager GUI or the method described in the Synology guide.
 
@@ -72,7 +72,7 @@ nano .env  # Configure your API keys
 ### Deployment
 
 > **Note for Synology Users**: The docker-compose approach below may not work on Synology NAS.
-> See [SETUP_N8N_SYNOLOGY.md](./SETUP_N8N_SYNOLOGY.md) for Synology-specific installation.
+> See [n8n/SETUP_SYNOLOGY.md](./n8n/SETUP_SYNOLOGY.md) for Synology-specific installation.
 
 **Step 1**: Start both services together
 
@@ -82,10 +82,10 @@ cp .env.example .env
 nano .env  # Add your API keys AND n8n credentials
 
 # For non-Synology NAS (QNAP, TrueNAS, generic Linux):
-docker-compose -f docker-compose.yml -f docker-compose.n8n.yml up -d
+docker-compose -f docker-compose.yml -f n8n/docker-compose.yml up -d
 
 # For Synology NAS: Use Container Manager GUI instead
-# See SETUP_N8N_SYNOLOGY.md for instructions
+# See n8n/SETUP_SYNOLOGY.md for instructions
 ```
 
 **Step 2**: Access n8n
@@ -218,7 +218,7 @@ docker-compose down
 nano .env
 
 # Start both services
-docker-compose -f docker-compose.yml -f docker-compose.n8n.yml up -d
+docker-compose -f docker-compose.yml -f n8n/docker-compose.yml up -d
 
 # Access n8n and create workflow
 open http://your-nas-ip:5678
@@ -269,7 +269,7 @@ docker-compose up -d
 
 ### Start webhook + n8n
 ```bash
-docker-compose -f docker-compose.yml -f docker-compose.n8n.yml up -d
+docker-compose -f docker-compose.yml -f n8n/docker-compose.yml up -d
 ```
 
 ### View logs

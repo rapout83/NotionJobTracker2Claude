@@ -157,8 +157,8 @@ Now you need something to trigger the webhook when you update Notion.
 
 **Option C: Self-hosted n8n** (Free but complex)
 - Requires installing n8n on your NAS
-- See N8N_WORKFLOW_GUIDE.md for complete instructions
-- For Synology: See SETUP_N8N_SYNOLOGY.md
+- See n8n/WORKFLOW_GUIDE.md for complete instructions
+- For Synology: See n8n/SETUP_SYNOLOGY.md
 
 ### What Happens When Everything is Running?
 
@@ -224,7 +224,7 @@ Direct processing endpoint (for testing)
 
 See [SETUP_NAS.md](./SETUP_NAS.md) for detailed NAS deployment instructions.
 
-**Synology NAS users**: For n8n installation, see [SETUP_N8N_SYNOLOGY.md](./SETUP_N8N_SYNOLOGY.md) for Synology-specific instructions.
+**Synology NAS users**: For n8n installation, see [n8n/SETUP_SYNOLOGY.md](./n8n/SETUP_SYNOLOGY.md) for Synology-specific instructions.
 
 ## Notion Setup
 
@@ -303,9 +303,9 @@ To see Claude's analysis:
 ### Quick Overview:
 
 1. **Install n8n** on your NAS
-   - **Synology NAS**: See [SETUP_N8N_SYNOLOGY.md](./SETUP_N8N_SYNOLOGY.md)
+   - **Synology NAS**: See [n8n/SETUP_SYNOLOGY.md](./n8n/SETUP_SYNOLOGY.md)
    - **Other NAS**: See [DEPLOYMENT_OPTIONS.md](./DEPLOYMENT_OPTIONS.md)
-2. **Create the workflow**: See [N8N_WORKFLOW_GUIDE.md](./N8N_WORKFLOW_GUIDE.md) for complete step-by-step instructions
+2. **Create the workflow**: See [n8n/WORKFLOW_GUIDE.md](./n8n/WORKFLOW_GUIDE.md) for complete step-by-step instructions
 
 **Pros of n8n**:
 - Free and open source

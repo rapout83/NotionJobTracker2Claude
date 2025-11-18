@@ -8,7 +8,7 @@ Complete guide for deploying NotionJobTracker2Claude on your personal NAS.
 
 - The `docker-compose` method for n8n may not work on Synology
 - Use Synology's **Container Manager GUI** instead
-- **See [SETUP_N8N_SYNOLOGY.md](./SETUP_N8N_SYNOLOGY.md)** for Synology-specific n8n setup
+- **See [n8n/SETUP_SYNOLOGY.md](./n8n/SETUP_SYNOLOGY.md)** for Synology-specific n8n setup
 - Or use cloud automation (Zapier/Make.com) which works perfectly with the webhook service
 
 **This guide below works for the webhook service on all NAS systems.**

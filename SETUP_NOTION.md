@@ -233,7 +233,7 @@ Content-Type: application/json
 If you want complete control and privacy, run n8n on your NAS.
 
 > **⚠️ Synology NAS Users**: The docker-compose method below may not work on Synology.
-> See [SETUP_N8N_SYNOLOGY.md](./SETUP_N8N_SYNOLOGY.md) for Synology-specific installation using Container Manager GUI.
+> See [n8n/SETUP_SYNOLOGY.md](./n8n/SETUP_SYNOLOGY.md) for Synology-specific installation using Container Manager GUI.
 
 ### 1. Install n8n on Your NAS
 
