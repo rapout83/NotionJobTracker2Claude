@@ -177,7 +177,7 @@ async def notion_webhook(
             )
 
         claude_response = claude_client.process_job_entry(job_entry)
-        logger.info(f"Claude processing completed for: {payload.page_id}")
+        logger.info(f"Claude processing completed for: {page_id}")
 
         return WebhookResponse(
             success=True,
