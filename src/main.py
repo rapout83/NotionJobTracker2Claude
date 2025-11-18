@@ -108,7 +108,7 @@ async def health_check():
 
 @app.post("/webhook/notion", response_model=WebhookResponse)
 async def notion_webhook(
-    payload: NotionWebhookPayload,
+    request: Request,
     x_webhook_secret: Optional[str] = Header(None)
 ):
     """
@@ -121,16 +121,42 @@ async def notion_webhook(
     4. Returns Claude's response
 
     Args:
-        payload: Webhook payload with page_id
+        request: Raw request to inspect payload
         x_webhook_secret: Secret for authentication
 
     Returns:
         WebhookResponse with Claude's analysis
     """
+    # Log the raw payload for debugging
+    body = await request.body()
+    logger.info(f"Raw webhook payload: {body.decode()}")
+
+    try:
+        payload_dict = await request.json()
+        logger.info(f"Parsed JSON payload: {payload_dict}")
+    except Exception as e:
+        logger.error(f"Failed to parse JSON: {e}")
+        return WebhookResponse(
+            success=False,
+            message="Invalid JSON payload",
+            error=str(e)
+        )
+
+    # Try to extract page_id from various possible formats
+    page_id = payload_dict.get("page_id") or payload_dict.get("pageId") or payload_dict.get("id")
+
+    if not page_id:
+        logger.error(f"No page_id found in payload: {payload_dict}")
+        return WebhookResponse(
+            success=False,
+            message="Missing page_id in payload",
+            error=f"Received fields: {list(payload_dict.keys())}"
+        )
+
     # Verify webhook secret
     verify_webhook_secret(x_webhook_secret)
 
-    logger.info(f"Received webhook for page_id: {payload.page_id}")
+    logger.info(f"Received webhook for page_id: {page_id}")
 
     try:
         # Fetch job entry from Notion
@@ -140,7 +166,7 @@ async def notion_webhook(
                 detail="Notion client not initialized"
             )
 
-        job_entry = notion_client.get_job_entry(payload.page_id)
+        job_entry = notion_client.get_job_entry(page_id)
         logger.info(f"Fetched job entry: {job_entry.title}")
 
         # Process with Claude
@@ -156,7 +182,7 @@ async def notion_webhook(
         return WebhookResponse(
             success=True,
             message="Job entry processed successfully",
-            page_id=payload.page_id,
+            page_id=page_id,
             claude_response=claude_response
         )
 
@@ -165,7 +191,7 @@ async def notion_webhook(
         return WebhookResponse(
             success=False,
             message="Error processing job entry",
-            page_id=payload.page_id,
+            page_id=page_id,
             error=str(e)
         )
 
