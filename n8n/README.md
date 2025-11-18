@@ -117,13 +117,18 @@ When you set up n8n, here's what runs on your NAS:
 When running with docker-compose, data is stored in:
 
 ```
-n8n/
-├── n8n_data/     # Workflows, settings, credentials
-├── n8n_db/       # PostgreSQL database
-└── n8n_files/    # File operations in workflows
+data/
+├── webhook/
+│   └── logs/         # Webhook service logs
+└── n8n/
+    ├── data/         # n8n workflows, settings, credentials
+    ├── db/           # PostgreSQL database
+    └── files/        # File operations in workflows
 ```
 
-**⚠️ Important**: Back up these folders regularly!
+**⚠️ Important**: Back up the `data/` folder regularly!
+
+See [DATA_ORGANIZATION.md](../DATA_ORGANIZATION.md) for details on the data structure.
 
 ## Common Tasks
 
