@@ -114,24 +114,25 @@ async def health_check():
 
 @app.post("/webhook/notion", response_model=WebhookResponse)
 async def notion_webhook(
-    request: Request,
-    x_webhook_secret: Optional[str] = Header(None)
+    request: Request
 ):
     """
     Webhook endpoint to receive Notion page triggers
 
     This endpoint:
-    1. Receives a Notion page ID
+    1. Receives a Notion page ID from automation
     2. Fetches the job entry from Notion
-    3. Sends it to Claude for processing
-    4. Returns Claude's response
+    3. Caches it for MCP access
+    4. Returns success status
+
+    Note: Webhook secret is NOT required for this endpoint since
+    Notion automations cannot send custom headers.
 
     Args:
         request: Raw request to inspect payload
-        x_webhook_secret: Secret for authentication
 
     Returns:
-        WebhookResponse with Claude's analysis
+        WebhookResponse with cache status
     """
     # Log the raw payload for debugging
     body = await request.body()
@@ -166,8 +167,7 @@ async def notion_webhook(
             error=f"Received fields: {list(payload_dict.keys())}"
         )
 
-    # Verify webhook secret
-    verify_webhook_secret(x_webhook_secret)
+    # No webhook secret verification for Notion automation (can't send custom headers)
 
     logger.info(f"Received webhook for page_id: {page_id}")
 
