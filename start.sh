@@ -15,9 +15,10 @@ if [ ! -f .env ]; then
     exit 1
 fi
 
-# Create webhook logs directory
+# Create webhook directories
 mkdir -p webhook/logs
-echo "✓ Created webhook directory structure"
+mkdir -p webhook/cache
+echo "✓ Created webhook directory structure (cache + logs)"
 
 # Check Docker and Docker Compose
 if ! command -v docker &> /dev/null; then

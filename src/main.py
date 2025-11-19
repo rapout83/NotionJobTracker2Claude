@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 
 from .models import NotionWebhookPayload, WebhookResponse, ClaudeRequest
 from .notion_client import NotionJobTrackerClient
-from .claude_client import ClaudeJobProcessor
+from .cache import JobCacheManager
 
 # Load environment variables
 load_dotenv()
@@ -27,20 +27,24 @@ logger = logging.getLogger(__name__)
 
 # Global clients (initialized on startup)
 notion_client: Optional[NotionJobTrackerClient] = None
-claude_client: Optional[ClaudeJobProcessor] = None
+cache_manager: Optional[JobCacheManager] = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup and shutdown"""
-    global notion_client, claude_client
+    global notion_client, cache_manager
 
     # Startup
     logger.info("Starting NotionJobTracker2Claude webhook service...")
     try:
         notion_client = NotionJobTrackerClient()
-        claude_client = ClaudeJobProcessor()
-        logger.info("Clients initialized successfully")
+        cache_manager = JobCacheManager(
+            cache_dir=os.getenv("CACHE_DIR", "webhook/cache"),
+            max_entries=int(os.getenv("CACHE_MAX_ENTRIES", "10")),
+            ttl_hours=int(os.getenv("CACHE_TTL_HOURS", "24"))
+        )
+        logger.info("Clients and cache manager initialized successfully")
     except Exception as e:
         logger.error(f"Failed to initialize clients: {e}")
         raise
@@ -99,10 +103,12 @@ async def root():
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
+    cache_stats = cache_manager.stats() if cache_manager else {}
     return {
         "status": "healthy",
         "notion_client": "initialized" if notion_client else "not initialized",
-        "claude_client": "initialized" if claude_client else "not initialized"
+        "cache_manager": "initialized" if cache_manager else "not initialized",
+        "cache_stats": cache_stats
     }
 
 
@@ -176,22 +182,31 @@ async def notion_webhook(
         job_entry = notion_client.get_job_entry(page_id)
         logger.info(f"Fetched job entry: {job_entry.title}")
 
-        # Process with Claude
-        if not claude_client:
+        # Cache the job entry for MCP access
+        if not cache_manager:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Claude client not initialized"
+                detail="Cache manager not initialized"
             )
 
-        claude_response = claude_client.process_job_entry(job_entry)
-        logger.info(f"Claude processing completed for: {page_id}")
+        cache_success = cache_manager.add(job_entry)
 
-        return WebhookResponse(
-            success=True,
-            message="Job entry processed successfully",
-            page_id=page_id,
-            claude_response=claude_response
-        )
+        if cache_success:
+            logger.info(f"Job entry cached successfully: {page_id}")
+            return WebhookResponse(
+                success=True,
+                message=f"Job entry cached successfully. Use Claude Desktop with MCP to analyze.",
+                page_id=page_id,
+                claude_response=None
+            )
+        else:
+            logger.error(f"Failed to cache job entry: {page_id}")
+            return WebhookResponse(
+                success=False,
+                message="Failed to cache job entry",
+                page_id=page_id,
+                error="Cache operation failed"
+            )
 
     except Exception as e:
         logger.error(f"Error processing webhook: {e}", exc_info=True)
@@ -203,49 +218,193 @@ async def notion_webhook(
         )
 
 
-@app.post("/process", response_model=WebhookResponse)
-async def process_job_entry(request: ClaudeRequest):
+# Removed /process endpoint - Claude API processing moved to MCP architecture
+# Use Claude Desktop with MCP to analyze cached job entries
+
+
+# ============================================================================
+# Cache Management Endpoints (for MCP integration)
+# ============================================================================
+
+@app.post("/cache/notion")
+async def cache_from_notion(
+    request: Request,
+    x_webhook_secret: Optional[str] = Header(None)
+):
     """
-    Direct endpoint to process a job entry with Claude
+    Manually cache a job entry from Notion
 
-    This is useful for testing or manual triggering without Notion webhook
-
-    Args:
-        request: ClaudeRequest with job_entry data
+    This is an alternative to the webhook endpoint for manual caching.
+    Expects: {"page_id": "notion_page_id"}
 
     Returns:
-        WebhookResponse with Claude's analysis
+        Cached job entry data
     """
-    logger.info(f"Processing job entry: {request.job_entry.title}")
+    verify_webhook_secret(x_webhook_secret)
 
     try:
-        if not claude_client:
+        payload = await request.json()
+        page_id = payload.get("page_id")
+
+        if not page_id:
             raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Claude client not initialized"
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Missing page_id in request"
             )
 
-        claude_response = claude_client.process_job_entry(
-            request.job_entry,
-            prompt_template=request.prompt_template,
-            max_tokens=request.max_tokens
-        )
+        if not notion_client or not cache_manager:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Services not initialized"
+            )
 
-        return WebhookResponse(
-            success=True,
-            message="Job entry processed successfully",
-            page_id=request.job_entry.page_id,
-            claude_response=claude_response
-        )
+        # Fetch and cache
+        job_entry = notion_client.get_job_entry(page_id)
+        cache_manager.add(job_entry)
+
+        logger.info(f"Manually cached job entry: {page_id}")
+
+        return {
+            "success": True,
+            "message": "Job entry cached successfully",
+            "job_entry": job_entry.model_dump()
+        }
 
     except Exception as e:
-        logger.error(f"Error processing job entry: {e}", exc_info=True)
-        return WebhookResponse(
-            success=False,
-            message="Error processing job entry",
-            page_id=request.job_entry.page_id,
-            error=str(e)
+        logger.error(f"Error caching from Notion: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
         )
+
+
+@app.get("/cache/{page_id}")
+async def get_cached_job(page_id: str):
+    """
+    Get a specific cached job entry by page_id
+
+    This endpoint is used by MCP to retrieve cached job data efficiently.
+
+    Args:
+        page_id: Notion page ID
+
+    Returns:
+        Cached job entry if found
+    """
+    if not cache_manager:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Cache manager not initialized"
+        )
+
+    job_entry = cache_manager.get(page_id)
+
+    if not job_entry:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Job entry not found in cache: {page_id}"
+        )
+
+    logger.info(f"Retrieved cached job entry: {page_id}")
+
+    return {
+        "success": True,
+        "job_entry": job_entry.model_dump()
+    }
+
+
+@app.get("/cache/list")
+async def list_cached_jobs():
+    """
+    List all cached job entries with metadata
+
+    Returns:
+        List of cached jobs with cache metadata
+    """
+    if not cache_manager:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Cache manager not initialized"
+        )
+
+    jobs = cache_manager.list_all()
+    stats = cache_manager.stats()
+
+    return {
+        "success": True,
+        "total_entries": len(jobs),
+        "cache_stats": stats,
+        "jobs": jobs
+    }
+
+
+@app.delete("/cache/clear")
+async def clear_cache(x_webhook_secret: Optional[str] = Header(None)):
+    """
+    Clear all cached entries
+
+    Requires webhook secret for security.
+
+    Returns:
+        Number of entries removed
+    """
+    verify_webhook_secret(x_webhook_secret)
+
+    if not cache_manager:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Cache manager not initialized"
+        )
+
+    count = cache_manager.clear()
+
+    logger.info(f"Cache cleared: {count} entries removed")
+
+    return {
+        "success": True,
+        "message": f"Cleared {count} cached entries",
+        "entries_removed": count
+    }
+
+
+@app.delete("/cache/{page_id}")
+async def delete_cached_job(
+    page_id: str,
+    x_webhook_secret: Optional[str] = Header(None)
+):
+    """
+    Delete a specific cached job entry
+
+    Requires webhook secret for security.
+
+    Args:
+        page_id: Notion page ID
+
+    Returns:
+        Success status
+    """
+    verify_webhook_secret(x_webhook_secret)
+
+    if not cache_manager:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Cache manager not initialized"
+        )
+
+    deleted = cache_manager.delete(page_id)
+
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Job entry not found in cache: {page_id}"
+        )
+
+    logger.info(f"Deleted cached entry: {page_id}")
+
+    return {
+        "success": True,
+        "message": f"Deleted cached entry: {page_id}"
+    }
 
 
 if __name__ == "__main__":

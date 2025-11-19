@@ -17,6 +17,8 @@ This guide explains how the webhook service integrates with your existing Docker
     ├── .env                     # Your API keys
     ├── start.sh                 # Start script
     └── webhook/                 # Runtime data (git-ignored)
+        ├── cache/               # Cached job entries (for MCP)
+        │   └── jobs.json        # Cache storage
         └── logs/                # Webhook logs
 ```
 
@@ -68,6 +70,8 @@ After running, your docker folder will look like:
     ├── docker-compose.yml
     ├── .env
     └── webhook/                 # Created on first run
+        ├── cache/               # Job entry cache (for MCP)
+        │   └── jobs.json
         └── logs/
             ├── access.log
             └── error.log
@@ -80,6 +84,7 @@ After running, your docker folder will look like:
 | n8n | `/volume1/docker/n8n/data` | Workflows, credentials |
 | n8n | `/volume1/docker/n8n/db` | PostgreSQL database |
 | n8n | `/volume1/docker/n8n/files` | File operations |
+| Webhook | `/volume1/docker/notion2claude/webhook/cache` | Cached job entries (for MCP) |
 | Webhook | `/volume1/docker/notion2claude/webhook/logs` | Service logs |
 
 ## Backup Strategy
@@ -100,6 +105,7 @@ tar -czf docker-backup-$(date +%Y%m%d).tar.gz n8n/ notion2claude/
 
 ### Expected Usage
 
+- **Webhook cache**: ~1-5MB (max 10 jobs, auto-cleaned)
 - **Webhook logs**: ~10-100MB (depends on usage)
 - **n8n data**: ~50-200MB (workflows and credentials)
 - **n8n PostgreSQL**: ~100-500MB (execution history)
@@ -108,7 +114,13 @@ tar -czf docker-backup-$(date +%Y%m%d).tar.gz n8n/ notion2claude/
 ### Check Disk Usage
 
 ```bash
+# Check webhook cache
+du -sh /volume1/docker/notion2claude/webhook/cache/
+
 # Check webhook logs
+du -sh /volume1/docker/notion2claude/webhook/logs/
+
+# Check all webhook data
 du -sh /volume1/docker/notion2claude/webhook/
 
 # Check n8n data
@@ -131,12 +143,32 @@ find /volume1/docker/notion2claude/webhook/logs/ -name "*.log" -mtime +30 -delet
 
 ## Network Communication
 
-When both services run on the same NAS:
+### MCP Architecture (Current)
 
 ```
-n8n (localhost:5678) ──HTTP──> Webhook (localhost:8000) ──API──> Claude
-                                    │
-                                    └──API──> Notion
+Notion Button ──HTTP──> Webhook (NAS:8000) ──Notion API──> Notion
+                              │
+                              ├──> Cache (webhook/cache/jobs.json)
+                              │
+Claude Desktop ──MCP──> MCP Server ──HTTP GET──> Webhook (NAS:8000)
+                                                       │
+                                                       └──> Cache (read)
+```
+
+From Notion automation button:
+- **URL**: `http://192.168.x.x:8000/webhook/notion`
+
+From Claude Desktop via MCP:
+- MCP server calls webhook REST API
+- **List jobs**: `GET http://192.168.x.x:8000/cache/list`
+- **Get job**: `GET http://192.168.x.x:8000/cache/{page_id}`
+
+### Legacy n8n Integration (Optional)
+
+If you want to use n8n instead of direct Notion button:
+
+```
+n8n (localhost:5678) ──HTTP──> Webhook (localhost:8000)
 ```
 
 From n8n workflow, use:
