@@ -278,6 +278,31 @@ async def cache_from_notion(
         )
 
 
+@app.get("/cache/list")
+async def list_cached_jobs():
+    """
+    List all cached job entries with metadata
+
+    Returns:
+        List of cached jobs with cache metadata
+    """
+    if not cache_manager:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Cache manager not initialized"
+        )
+
+    jobs = cache_manager.list_all()
+    stats = cache_manager.stats()
+
+    return {
+        "success": True,
+        "total_entries": len(jobs),
+        "cache_stats": stats,
+        "jobs": jobs
+    }
+
+
 @app.get("/cache/{page_id}")
 async def get_cached_job(page_id: str):
     """
@@ -310,31 +335,6 @@ async def get_cached_job(page_id: str):
     return {
         "success": True,
         "job_entry": job_entry.model_dump()
-    }
-
-
-@app.get("/cache/list")
-async def list_cached_jobs():
-    """
-    List all cached job entries with metadata
-
-    Returns:
-        List of cached jobs with cache metadata
-    """
-    if not cache_manager:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Cache manager not initialized"
-        )
-
-    jobs = cache_manager.list_all()
-    stats = cache_manager.stats()
-
-    return {
-        "success": True,
-        "total_entries": len(jobs),
-        "cache_stats": stats,
-        "jobs": jobs
     }
 
 
