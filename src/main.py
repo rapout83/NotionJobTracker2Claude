@@ -143,7 +143,14 @@ async def notion_webhook(
         )
 
     # Try to extract page_id from various possible formats
-    page_id = payload_dict.get("page_id") or payload_dict.get("pageId") or payload_dict.get("id")
+    # Notion automation sends: {"data": {"id": "...", ...}}
+    page_id = None
+    if "data" in payload_dict and isinstance(payload_dict["data"], dict):
+        page_id = payload_dict["data"].get("id")
+
+    # Fallback to top-level fields for manual triggers
+    if not page_id:
+        page_id = payload_dict.get("page_id") or payload_dict.get("pageId") or payload_dict.get("id")
 
     if not page_id:
         logger.error(f"No page_id found in payload: {payload_dict}")
