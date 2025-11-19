@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "notion-job-tracker": {
+      "command": "python",
+      "args": [
+        "/REPLACE/WITH/ABSOLUTE/PATH/TO/NotionJobTracker2Claude/mcp_server/server.py"
+      ],
+      "env": {
+        "WEBHOOK_BASE_URL": "http://192.168.1.100:8000"
+      }
+    }
+  }
+}
