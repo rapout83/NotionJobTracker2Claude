@@ -88,7 +88,7 @@ class NotionJobTrackerClient:
     def _extract_title(self, properties: Dict[str, Any]) -> str:
         """Extract title from properties"""
         # Try common title field names
-        for field_name in ["Name", "Title", "Job Title"]:
+        for field_name in ["Company", "Name", "Title", "Job Title"]:
             if field_name in properties:
                 prop = properties[field_name]
                 if prop.get("type") == "title" and prop.get("title"):
@@ -96,11 +96,18 @@ class NotionJobTrackerClient:
         return "Untitled"
 
     def _extract_text(self, prop: Optional[Dict[str, Any]]) -> Optional[str]:
-        """Extract text from a property"""
+        """Extract text from a property (handles both rich_text and title types)"""
         if not prop:
             return None
+
+        # Handle rich_text type
         if prop.get("type") == "rich_text" and prop.get("rich_text"):
             return "".join([t.get("plain_text", "") for t in prop["rich_text"]])
+
+        # Handle title type (for fields like Company that are database titles)
+        if prop.get("type") == "title" and prop.get("title"):
+            return "".join([t.get("plain_text", "") for t in prop["title"]])
+
         return None
 
     def _extract_rich_text(self, prop: Optional[Dict[str, Any]]) -> Optional[str]:
@@ -108,11 +115,18 @@ class NotionJobTrackerClient:
         return self._extract_text(prop)
 
     def _extract_select(self, prop: Optional[Dict[str, Any]]) -> Optional[str]:
-        """Extract select option from a property"""
+        """Extract select/status option from a property"""
         if not prop:
             return None
+
+        # Handle select type
         if prop.get("type") == "select" and prop.get("select"):
             return prop["select"].get("name")
+
+        # Handle status type (similar to select)
+        if prop.get("type") == "status" and prop.get("status"):
+            return prop["status"].get("name")
+
         return None
 
     def _extract_url(self, prop: Optional[Dict[str, Any]]) -> Optional[str]:
